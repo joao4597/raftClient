@@ -5,6 +5,9 @@
  */
 package raftclient;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -22,13 +25,19 @@ public class Comunication {
     private InetAddress ipAddress = null;
     private DatagramSocket sendSocket;
     private DatagramSocket receiveSocket;
-    private int serialNumber = 0;
+    private int serialNumber = 1;
+    private int clusterSize = 11;
+    public FileWriter electionTimeFile;
+    
+    public long electionTimeMeasurement = 0;
     
     public Comunication() {
         
+        openFileElectionTime();
+        
         //EACH COMAND HAS ASSOCIATED A SERIAL NUMBER
         //USED TO AVOID REPETITION
-        serialNumber = 0;
+        serialNumber = 1;
         
         try {
             ipAddress = InetAddress.getByName("localhost");
@@ -58,16 +67,19 @@ public class Comunication {
      */
     public String broadcastCommand(String command){
         
-        serialNumber++;
+        //serialNumber++;
         
-        command = "4100-100-" + Integer.toString(serialNumber) + "-" + command + "-";
+        command = "4100-0-100-" + Integer.toString(serialNumber) + "-" + command + "-";
         
         
         //SEND COMMAND IN BROADCAST AND WAIT FOR RESPONSE
         byte receiveData[] = new byte[1024];
         
-        for(int i=4000; i < 4005; i++){
+        for(int i=4000; i < 4000 + clusterSize; i++){
             DatagramPacket sendPacket;
+            if (electionTimeMeasurement == 0){
+                electionTimeMeasurement = System.nanoTime();
+            }
             sendPacket = new DatagramPacket(command.getBytes(), command.length(), ipAddress, i);
             try {
                 sendSocket.send(sendPacket);
@@ -90,6 +102,7 @@ public class Comunication {
                 receiveSocket.receive(receivePacket);
             } catch (IOException ex) {
                 Logger.getLogger(Comunication.class.getName()).log(Level.SEVERE, null, ex);
+                serialNumber++;
                 return null;
             }
         
@@ -98,10 +111,31 @@ public class Comunication {
             
             
             if(Integer.parseInt(parts[1]) == serialNumber){
+                serialNumber++;
+                saveReplicationTime(System.nanoTime() - electionTimeMeasurement);
+                electionTimeMeasurement = 0;
                 return commandReceived;
             }
+        }   
+    }
+    
+    public void openFileElectionTime(){
+        try {
+            File file = new File("logReplication.txt");
+            electionTimeFile = new FileWriter(file, true);
+        } catch (IOException ex) {
+            Logger.getLogger(Comunication.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
-        
+    }
+    
+    public void saveReplicationTime(long time){
+        BufferedWriter out;
+        out = new BufferedWriter(electionTimeFile);
+        try {
+            out.write(Long.toString(time) + "\n");
+            out.flush();
+        } catch (IOException ex) {
+            Logger.getLogger(Comunication.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }

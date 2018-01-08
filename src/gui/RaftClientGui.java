@@ -1,5 +1,7 @@
 package gui;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import raftclient.Comunication;
 
 /*
@@ -61,7 +63,7 @@ public class RaftClientGui extends javax.swing.JFrame {
         });
 
         jLabel2.setFont(new java.awt.Font("Lucida Grande", 0, 10)); // NOI18N
-        jLabel2.setText("Add new state machine entrie:");
+        jLabel2.setText("Add new state machine entry:");
 
         console.setEditable(false);
         console.setColumns(20);
@@ -113,13 +115,20 @@ public class RaftClientGui extends javax.swing.JFrame {
         // TODO add your handling code here:
         String aux = commandInput.getText();
         commandInput.setText("");
-        String response = comunication.broadcastCommand(aux);
-        if(response != null){
-            console.append(aux + " -> success\n");
-            System.out.println(response);
-        }else {
-            console.append(aux + " -> failed\n");
-        }
+        //while(true){
+            String response = comunication.broadcastCommand(aux);
+            if(response != null){
+                console.append(aux + " -> success\n");
+                System.out.println(response);
+            }else {
+                console.append(aux + " -> failed\n");
+            }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(RaftClientGui.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        //}
     }//GEN-LAST:event_submiteButtonActionPerformed
 
     /**
